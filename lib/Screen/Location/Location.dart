@@ -6,6 +6,7 @@ import '../../Utils/TextLanguage.dart';
 import '../../Widget/IslamicPatternPainter.dart';
 import '../../Widget/Mosque.dart';
 import '../BottomNavBar/BottomNavBar.dart';
+import 'package:get_storage/get_storage.dart';
 class Location extends StatefulWidget {
   const Location({super.key, required this.title});
   final String title;
@@ -116,15 +117,16 @@ class _MyHomePageState extends State<Location> {
                 padding:  EdgeInsets.symmetric(horizontal: size.GetWidth()*5, vertical: size.GetHeight()*7),
                 child: ElevatedButton(
                   onPressed: ()async {
+                    final box = GetStorage();
                     Position? position = await LocationService.determinePosition(context);
 
                     if (position != null) {
-                      print("تم الحصول على الموقع: ${position.latitude}, ${position.longitude}");
-                      print("تم الحصول على الموقع: ${position.heading}, ${position.longitude}");
+                     await box.write('latitude', position.latitude);
+                     await box.write('longitude', position.longitude);
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(builder: (context) => const BottomNavBar()),
-                            (route) => false, // هذا السطر يحذف كل الصفحات السابقة من الذاكرة لكي لا يعود المستخدم لصفحة جلب الموقع
+                            (route) => false,
                       );
                     }
                   },

@@ -4,6 +4,8 @@ import 'package:prayer/Screen/Location/Location.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'Screen/BottomNavBar/BottomNavBar.dart';
 void main()async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
@@ -70,8 +72,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   @override
   Widget build(BuildContext context) {
+    final box = GetStorage();
+    final latitude = box.read('latitude');
     return Scaffold(
-      body:Location(title: "title")
+      body:latitude==null?Location(title: "title"):const BottomNavBar(),
     );
   }
 }
