@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:geocoding/geocoding.dart' hide Location;
+import 'package:muslim_data_flutter/muslim_data_flutter.dart';
 import '../../Utils/GreetingHelper.dart';
 import '../../Utils/HijriHelper.dart';
 import '../../Utils/LocationService.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:muslim_data_flutter/muslim_data_flutter.dart';
-import 'package:geocoding/geocoding.dart' hide Location;
-
+import '../../Utils/TextLanguage.dart';
 import 'Widget/TodayPrayersList.dart';
 
 class TimeProvider extends ChangeNotifier {
@@ -16,47 +16,45 @@ class TimeProvider extends ChangeNotifier {
   String _hijriDate = "";
   String _greeting = "";
 
-  // متغيرات الصلاة القادمة
+  String _nextPrayerKey = "fajr";
   String _nextPrayerName = "---";
   String _nextPrayerTime = "--:-- --";
   String _timeRemaining = "00:00:00";
+
   Timer? _countdownTimer;
 
   String get currentAddress => _currentAddress;
   Position? get currentPosition => _currentPosition;
   String get hijriDate => _hijriDate;
   String get greeting => _greeting;
-
   String get nextPrayerName => _nextPrayerName;
   String get nextPrayerTime => _nextPrayerTime;
   String get timeRemaining => _timeRemaining;
 
-  MuslimRepository repo = MuslimRepository();
+  final MuslimRepository repo = MuslimRepository();
   PrayerTime? prayerTime;
+  Location? _cachedLocation;
+  final TextLanguage _lang = TextLanguage();
 
   Future<void> initTimeData(BuildContext context) async {
     _greeting = GreetingHelper.getGreeting();
     _hijriDate = HijriHelper.getTodayHijri();
     notifyListeners();
 
-    await fetchLocationAndAddress(context);
+    if (_cachedLocation == null) {
+      final box = GetStorage();
+      double lat = box.read('latitude') ?? 36.1912;
+      double lng = box.read('longitude') ?? 44.0091;
+      _cachedLocation = await repo.reverseGeocoder(latitude: lat, longitude: lng);
+    }
+
     await loadPrayerTimes();
+    _fetchLocationInBackground(context);
   }
 
   Future<void> loadPrayerTimes() async {
     try {
-      double lat = _currentPosition?.latitude ?? 36.1912;
-      double lng = _currentPosition?.longitude ?? 44.0091;
-
-      final dbLocation = await repo.reverseGeocoder(
-        latitude: lat,
-        longitude: lng,
-      );
-
-      if (dbLocation == null) {
-        print("تعذر العثور على الموقع في قاعدة البيانات");
-        return;
-      }
+      if (_cachedLocation == null) return;
 
       final attribute = PrayerAttribute(
         calculationMethod: CalculationMethod.makkah,
@@ -66,23 +64,19 @@ class TimeProvider extends ChangeNotifier {
       );
 
       final result = await repo.getPrayerTimes(
-        location: dbLocation,
+        location: _cachedLocation!,
         date: DateTime.now(),
         attribute: attribute,
       );
 
       prayerTime = result;
-
-      // تشغيل العداد مباشرة بعد جلب البيانات بنجاح
       _startCountdown();
-
       notifyListeners();
     } catch (e) {
       print("خطأ في جلب مواقيت الصلاة: $e");
     }
   }
 
-  // العداد التنازلي المحدث بعد تعديل الأنواع إلى DateTime
   void _startCountdown() {
     _countdownTimer?.cancel();
 
@@ -91,34 +85,36 @@ class TimeProvider extends ChangeNotifier {
 
       final now = DateTime.now();
       DateTime? nextPrayerDateTime;
-      String name = "";
+      String nextKey = "fajr";
 
       final fajr = prayerTime!.fajr;
       final dhuhr = prayerTime!.dhuhr;
       final asr = prayerTime!.asr;
       final maghrib = prayerTime!.maghrib;
       final isha = prayerTime!.isha;
+
       if (now.isBefore(fajr)) {
-        name = "الفجر";
+        nextKey = "fajr";
         nextPrayerDateTime = fajr;
       } else if (now.isBefore(dhuhr)) {
-        name = "الضهر";
+        nextKey = "dhuhr";
         nextPrayerDateTime = dhuhr;
       } else if (now.isBefore(asr)) {
-        name = "العصر";
+        nextKey = "asr";
         nextPrayerDateTime = asr;
       } else if (now.isBefore(maghrib)) {
-        name = "المغرب";
+        nextKey = "maghrib";
         nextPrayerDateTime = maghrib;
       } else if (now.isBefore(isha)) {
-        name = "العشاء";
+        nextKey = "isha";
         nextPrayerDateTime = isha;
       } else {
-        name = "الفجر";
+        nextKey = "fajr";
         nextPrayerDateTime = fajr.add(const Duration(days: 1));
       }
 
-      _nextPrayerName = name;
+      _nextPrayerKey = nextKey;
+      _nextPrayerName = _getPrayerLocalizedName(nextKey);
       _nextPrayerTime = _formatToAmPm(nextPrayerDateTime);
       final difference = nextPrayerDateTime.difference(now);
       _timeRemaining = "-${_formatDuration(difference)}";
@@ -127,14 +123,31 @@ class TimeProvider extends ChangeNotifier {
     });
   }
 
+  String _getPrayerLocalizedName(String key) {
+    switch (key) {
+      case 'fajr':
+        return _lang.GetWord('الفجر');
+      case 'sunrise':
+        return _lang.GetWord('الشروق');
+      case 'dhuhr':
+        return _lang.GetWord('الضهر');
+      case 'asr':
+        return _lang.GetWord('العصر');
+      case 'maghrib':
+        return _lang.GetWord('المغرب');
+      case 'isha':
+        return _lang.GetWord('العشاء');
+      default:
+        return _lang.GetWord('الفجر');
+    }
+  }
+
   String _formatToAmPm(DateTime dateTime) {
     int hour = dateTime.hour;
     final minute = dateTime.minute.toString().padLeft(2, '0');
     final period = hour >= 12 ? 'PM' : 'AM';
-
     if (hour > 12) hour -= 12;
     if (hour == 0) hour = 12;
-
     return "${hour.toString().padLeft(2, '0')}:$minute $period";
   }
 
@@ -145,49 +158,58 @@ class TimeProvider extends ChangeNotifier {
     return "$hours:$minutes:$seconds";
   }
 
-  Future<void> fetchLocationAndAddress(BuildContext context) async {
-    Position? position = await LocationService.determinePosition(context);
-    if (position != null) {
+  Future<void> _fetchLocationInBackground(BuildContext context) async {
+    try {
+      Position? position = await LocationService.determinePosition(context);
+      if (position == null) {
+        _currentAddress = "الموقع معطل";
+        notifyListeners();
+        return;
+      }
+
       _currentPosition = position;
+
       try {
         List<Placemark> placemarks = await placemarkFromCoordinates(
           position.latitude,
           position.longitude,
-        ).timeout(const Duration(seconds: 5), onTimeout: () {
-          throw Exception("انتهى وقت الانتظار");
-        });
+        ).timeout(const Duration(seconds: 2));
 
         if (placemarks.isNotEmpty) {
-          Placemark place = placemarks[0];
-          _currentAddress = "${place.locality}، ${place.country}";
+          _currentAddress = "${placemarks[0].locality}، ${placemarks[0].country}";
         }
-      } catch (e) {
-        _currentAddress = "تعذر تحديد اسم المنطقة";
-      } finally {
-        notifyListeners();
+      } catch (_) {
+        _currentAddress = "تم تحديد الموقع (بدون إنترنت)";
       }
-    } else {
-      _currentAddress = "الموقع معطل";
+
       notifyListeners();
+    } catch (e) {
+      print("خطأ في تحديد الموقع: $e");
     }
   }
+
   List<Map<String, dynamic>> get prayerList {
     if (prayerTime == null) return [];
 
     final prayers = [
-      {'nameAr': 'الفجر',   'nameKey': 'الفجر',   'time': prayerTime!.fajr},
-      {'nameAr': 'الظهر',   'nameKey': 'الضهر',   'time': prayerTime!.dhuhr},
-      {'nameAr': 'العصر',   'nameKey': 'العصر',   'time': prayerTime!.asr},
-      {'nameAr': 'المغرب',  'nameKey': 'المغرب',  'time': prayerTime!.maghrib},
-      {'nameAr': 'العشاء',  'nameKey': 'العشاء',  'time': prayerTime!.isha},
+      {'nameKey': 'fajr',    'nameLocalized': _lang.GetWord('الفجر'),   'time': prayerTime!.fajr,    'isInfo': false},
+      {'nameKey': 'sunrise', 'nameLocalized': _lang.GetWord('الشروق'),  'time': prayerTime!.sunrise, 'isInfo': true},
+      {'nameKey': 'dhuhr',   'nameLocalized': _lang.GetWord('الضهر'),   'time': prayerTime!.dhuhr,   'isInfo': false},
+      {'nameKey': 'asr',     'nameLocalized': _lang.GetWord('العصر'),   'time': prayerTime!.asr,     'isInfo': false},
+      {'nameKey': 'maghrib', 'nameLocalized': _lang.GetWord('المغرب'),  'time': prayerTime!.maghrib, 'isInfo': false},
+      {'nameKey': 'isha',    'nameLocalized': _lang.GetWord('العشاء'),  'time': prayerTime!.isha,    'isInfo': false},
     ];
 
     final now = DateTime.now();
+
     return prayers.map((p) {
       final pTime = p['time'] as DateTime;
+      final isInfo = p['isInfo'] as bool;
       PrayerState state;
 
-      if (_nextPrayerName == p['nameKey']) {
+      if (isInfo) {
+        state = pTime.isBefore(now) ? PrayerState.passed : PrayerState.upcoming;
+      } else if (_nextPrayerKey == p['nameKey']) {
         state = PrayerState.active;
       } else if (pTime.isBefore(now)) {
         state = PrayerState.passed;
@@ -202,10 +224,10 @@ class TimeProvider extends ChangeNotifier {
       };
     }).toList();
   }
+
   @override
   void dispose() {
     _countdownTimer?.cancel();
     super.dispose();
   }
-
 }

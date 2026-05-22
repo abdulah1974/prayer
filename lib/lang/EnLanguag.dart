@@ -6,5 +6,22 @@ final EnLanguag  = {
   'تفعيل خدمة الموقع': 'Enable Location Service',
   "الصلاة التالية":"NEXT PRAYER",
   "الوقت المتبقي":"TIME REMAINING",
-  "الصلاة اليوم":"Today's Prayers"
+  "الصلاة اليوم":"Today's Prayers",
+  "عام":"GENERAL",
+  "لغة":"Language",
+  "الإعدادات":"Settings",
+  'الفجر': 'Fajr',
+  'الشروق': 'Sunrise',
+  'الضهر': 'Dhuhr',
+  'العصر': 'Asr',
+  'المغرب': 'Maghrib',
+  'العشاء': 'Isha',
+  "القبلة":"Qibla",
+  "مكة المكرمة":"Mecca",
+  "اتجاهك":"Your direction",
+  "ش":"N",
+  "ج":"S",
+  "غ":"W",
+  "ق":"E",
+  "اللغات المتاحة":"AVAILABLE LANGUAGES"
 };

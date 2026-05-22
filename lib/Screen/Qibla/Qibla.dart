@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
+import 'package:prayer/Utils/TextLanguage.dart';
 import '../../Utils/Sizes.dart';
 import '../../Widget/IslamicPatternPainter.dart';
 
@@ -12,83 +13,130 @@ class Qibla extends StatefulWidget {
 }
 
 class _QiblaState extends State<Qibla> {
-  static const Color primary     = Color(0xFF8b7e66);
-  static const Color background  = Color(0xFFFBF9F4);
-  static const Color foreground  = Color(0xFF3d3a33);
-  static const Color mutedFg     = Color(0xFF7a7468);
-  static const Color cardBg      = Color(0xFFFFFFFF);
-  static const Color border      = Color(0xFFe3ded3);
+  static const Color primary    = Color(0xFF8b7e66);
+  static const Color background = Color(0xFFFBF9F4);
+  static const Color foreground = Color(0xFF3d3a33);
+  static const Color mutedFg    = Color(0xFF7a7468);
+  static const Color cardBg     = Color(0xFFFFFFFF);
+  static const Color border     = Color(0xFFe3ded3);
+
+  late Future<bool?> _deviceSupport;
+
+  @override
+  void initState() {
+    super.initState();
+    _deviceSupport = FlutterQiblah.androidDeviceSensorSupport();
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
     final s = Sizes(context);
 
     return Directionality(
-      textDirection: TextDirection.rtl, // لضمان التوافق التام مع اللغة العربية
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: background,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              // Islamic background pattern
-              Positioned.fill(
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: IslamicPatternPainter(),
-                  ),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: CustomPaint(painter: IslamicPatternPainter()),
+              ),
+            ),
+            SafeArea(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: Sizes(context).GetWidth()*4),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children:  [
+                            Text(
+                              TextLanguage().GetWord('القبلة'),
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                                //color: foregroundColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Expanded(
+                      child: FutureBuilder<bool?>(
+                        future: _deviceSupport,
+                        builder: (context, deviceSnapshot) {
+                          if (deviceSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(color: primary),
+                            );
+                          }
+
+                          // جهاز بدون مستشعر
+                          if (deviceSnapshot.data == false) {
+                            return const Center(
+                              child: Text('جهازك لا يدعم مستشعر الاتجاه'),
+                            );
+                          }
+
+                          // تحقق من الـ location قبل فتح الـ stream
+                          return FutureBuilder<LocationStatus>(
+                            future: FlutterQiblah.checkLocationStatus(),
+                            builder: (context, locationSnapshot) {
+                              if (locationSnapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(color: primary),
+                                );
+                              }
+                              // كل شي تمام ← افتح الـ stream
+                              return StreamBuilder<QiblahDirection>(
+                                stream: FlutterQiblah.qiblahStream,
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(color: primary),
+                                    );
+                                  }
+
+                                  if (snapshot.hasError) {
+                                    return const Center(
+                                      child: Text('حدث خطأ في قراءة مستشعرات الجهاز'),
+                                    );
+                                  }
+
+                                  final double heading = snapshot.data!.direction;
+                                  final double qiblaAngle = snapshot.data!.qiblah;
+
+                                  return Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildCompass(s, heading, qiblaAngle),
+                                      SizedBox(height: s.GetHeight() * 5),
+                                      _buildInfoSection(s, heading, qiblaAngle),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
-              // Content
-              Column(
-                children: [
-                  _buildHeader(context, s),
-                  Expanded(
-                    child: StreamBuilder<QiblahDirection>(
-                      stream: FlutterQiblah.qiblahStream,
-                      builder: (context, snapshot) {
-                        // حالة التحميل أثناء قراءة الحساسات والـ GPS
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(color: primary),
-                          );
-                        }
-
-                        if (snapshot.hasError || !snapshot.hasData) {
-                          return const Center(
-                            child: Text('حدث خطأ في قراءة مستشعرات الجهاز'),
-                          );
-                        }
-
-                        final qiblahDirection = snapshot.data!;
-
-                        // زاوية الهاتف الحالية بالنسبة للشمال (Heading)
-                        final double heading = qiblahDirection.direction;
-
-                        // زاوية القبلة المطلوبة بالنسبة للشمال لموقعك الحالي (Bearing)
-                        final double qiblaAngle = qiblahDirection.qiblah;
-
-                        return Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildCompass(s, heading, qiblaAngle),
-                            SizedBox(height: s.GetHeight() * 5),
-                            _buildInfoSection(s, heading, qiblaAngle),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ─── Header ───────────────────────────────────────────────────
   Widget _buildHeader(BuildContext context, Sizes s) {
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -99,7 +147,7 @@ class _QiblaState extends State<Qibla> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'القبلة',
+            TextLanguage().GetWord('القبلة'),
             style: TextStyle(
               fontSize: s.GetWidth() * 5,
               fontWeight: FontWeight.bold,
@@ -111,16 +159,13 @@ class _QiblaState extends State<Qibla> {
     );
   }
 
-  // ─── Compass ──────────────────────────────────────────────────
   Widget _buildCompass(Sizes s, double heading, double qiblaAngle) {
     final double compassSize = s.GetWidth() * 75;
     final double innerSize   = compassSize * 0.70;
     final double kaabaSize   = s.GetWidth() * 10;
 
-    // تحويل الزوايا إلى دورات (Turns) لـ AnimatedRotation
-    // نضرب بـ -1 لأن اللوحة تدور بعكس اتجاه دوران الهاتف الحقيقي
     final double compassTurns = -heading / 360;
-    final double kaabaTurns = -qiblaAngle / 360;
+    final double kaabaTurns   = -qiblaAngle / 360;
 
     return SizedBox(
       width: compassSize,
@@ -128,7 +173,6 @@ class _QiblaState extends State<Qibla> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer ring
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -143,8 +187,6 @@ class _QiblaState extends State<Qibla> {
               ],
             ),
           ),
-
-          // Dashed ring
           CustomPaint(
             size: Size(compassSize * 0.93, compassSize * 0.93),
             painter: _DashedCirclePainter(
@@ -152,18 +194,12 @@ class _QiblaState extends State<Qibla> {
               radius: compassSize * 0.93 / 2,
             ),
           ),
-
-          // 1. الحروف الاتجاهية (تتحرك بسلاسة وسرعة فائقة)
           AnimatedRotation(
             turns: compassTurns,
             duration: const Duration(milliseconds: 150),
             curve: Curves.easeOut,
-            child: Stack(
-              children: _buildCardinalPoints(s, compassSize),
-            ),
+            child: Stack(children: _buildCardinalPoints(s, compassSize)),
           ),
-
-          // 2. الكعبة المشرفة (تتحرك ديناميكياً بناءً على موقعك الحقيقي)
           AnimatedRotation(
             turns: kaabaTurns,
             duration: const Duration(milliseconds: 150),
@@ -206,8 +242,6 @@ class _QiblaState extends State<Qibla> {
               ),
             ),
           ),
-
-          // 3. الإبرة الداخلية (تشير دائماً إلى الشمال المغناطيسي)
           Container(
             width: innerSize,
             height: innerSize,
@@ -223,8 +257,6 @@ class _QiblaState extends State<Qibla> {
               child: const CustomPaint(painter: _NeedlePainter()),
             ),
           ),
-
-          // Center pivot
           Container(
             width: s.GetWidth() * 4,
             height: s.GetWidth() * 4,
@@ -248,10 +280,10 @@ class _QiblaState extends State<Qibla> {
 
   List<Widget> _buildCardinalPoints(Sizes s, double compassSize) {
     final labels = [
-      ('ش', Alignment.topCenter),
-      ('ج', Alignment.bottomCenter),
-      ('غ', Alignment.centerLeft),
-      ('ق', Alignment.centerRight),
+      (TextLanguage().GetWord('ش'), Alignment.topCenter),
+      (TextLanguage().GetWord('ج'), Alignment.bottomCenter),
+      (TextLanguage().GetWord('غ'), Alignment.centerLeft),
+      (TextLanguage().GetWord('ق'), Alignment.centerRight),
     ];
 
     return labels.map((item) {
@@ -273,12 +305,7 @@ class _QiblaState extends State<Qibla> {
     }).toList();
   }
 
-  // ─── Info Section ─────────────────────────────────────────────
   Widget _buildInfoSection(Sizes s, double heading, double qiblaAngle) {
-    // حساب اتجاه القبلة الفعلي بناءً على موقع المستخدم الحالي من المكتبة
-    // (الرقم الثابت 195 القديم استُبدل هنا بالزاوية الحية لموقعك الفعلي)
-    final double actualQiblaOffset = (qiblaAngle + heading) % 360;
-
     return Column(
       children: [
         Row(
@@ -286,7 +313,6 @@ class _QiblaState extends State<Qibla> {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            // زاوية القبلة الحية لموقعك الحالي
             Text(
               '${195}°',
               style: TextStyle(
@@ -306,7 +332,6 @@ class _QiblaState extends State<Qibla> {
               ),
             ),
             SizedBox(width: s.GetWidth() * 2),
-            // اتجاه الهاتف الحالي الحركي السريع
             Text(
               '${heading.toInt()}°',
               style: TextStyle(
@@ -318,7 +343,7 @@ class _QiblaState extends State<Qibla> {
             ),
             SizedBox(width: s.GetWidth() * 1.5),
             Text(
-              'اتجاهك',
+              TextLanguage().GetWord("اتجاهك"),
               style: TextStyle(
                 fontSize: s.GetWidth() * 4.5,
                 fontWeight: FontWeight.w500,
@@ -344,7 +369,7 @@ class _QiblaState extends State<Qibla> {
               Icon(Icons.location_on_rounded, size: s.GetWidth() * 4, color: primary),
               SizedBox(width: s.GetWidth() * 1.5),
               Text(
-                'مكة المكرمة',
+                TextLanguage().GetWord('مكة المكرمة'),
                 style: TextStyle(
                   fontSize: s.GetWidth() * 3.5,
                   fontWeight: FontWeight.w600,
@@ -359,7 +384,6 @@ class _QiblaState extends State<Qibla> {
   }
 }
 
-// ─── Needle Painter ───────────────────────────────────────────────
 class _NeedlePainter extends CustomPainter {
   const _NeedlePainter();
 
@@ -398,7 +422,6 @@ class _NeedlePainter extends CustomPainter {
   bool shouldRepaint(_) => false;
 }
 
-// ─── Dashed Circle Painter ────────────────────────────────────────
 class _DashedCirclePainter extends CustomPainter {
   final Color color;
   final double radius;

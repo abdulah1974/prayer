@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // تأكد من إضافة مكتبة provider في pubspec.yaml
 import '../../Widget/CustomBottomNavBar.dart';
 import '../Qibla/Qibla.dart';
+import '../Setting/Setting.dart';
 import '../Time/Time.dart';
 import 'BottomNavBarProvider.dart';
 
@@ -20,7 +21,7 @@ class BottomNavBar extends StatelessWidget {
              children: const [
                Center(child: Time()),
                Center(child: Qibla()),
-               Center(child: Text('Settings Screen')),
+               Center(child: Setting()),
              ],
            ),
            bottomNavigationBar: CustomBottomNavBar(

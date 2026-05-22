@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:prayer/Utils/Sizes.dart';
 import 'package:prayer/Utils/TextLanguage.dart';
-
 import '../../Widget/IslamicPatternPainter.dart';
 import 'TimeProvider.dart';
 import 'package:provider/provider.dart';
@@ -65,14 +64,13 @@ class Time extends StatelessWidget {
                                   ],
                                 ),
                                 SizedBox(height: Sizes(context).GetHeight()*2),
-                                // Fajr - Passed
                                 ...navProvider.prayerList.map((prayer) {
                                   return Column(
                                     children: [
                                       TodayPrayersList(
                                         icon: _getPrayerIcon(prayer['nameKey'] as String),
-                                        name: prayer['nameAr'] as String,
-                                        subtitle: prayer['nameKey'] as String,
+                                        name: prayer['nameLocalized'] as String,
+                                        subtitle: prayer['nameLocalized'] as String,
                                         time: prayer['timeStr'] as String,
                                         state: prayer['state'] as PrayerState,
                                       ),
@@ -95,14 +93,22 @@ class Time extends StatelessWidget {
     );
   }
 
-  IconData _getPrayerIcon(String name) {
-    switch (name) {
-      case 'الفجر':   return Icons.wb_twilight;
-      case 'الضهر':   return Icons.wb_sunny_outlined;
-      case 'العصر':   return Icons.wb_sunny;
-      case 'المغرب':  return Icons.wb_cloudy_outlined;
-      case 'العشاء':  return Icons.nightlight_outlined;
-      default:        return Icons.access_time;
+  String _getPrayerIcon(String key) {
+    switch (key) {
+      case 'fajr':
+        return "assets/icon/Fajr.svg";
+      case 'sunrise':
+        return "assets/icon/Sunrise.svg";
+      case 'dhuhr':
+        return "assets/icon/Dhuhr.svg";
+      case 'asr':
+        return "assets/icon/Asr.svg";
+      case 'maghrib':
+        return "assets/icon/Maghrib.svg";
+      case 'isha':
+        return "assets/icon/Isha.svg";
+      default:
+        return "assets/icon/Fajr.svg";
     }
   }
 }

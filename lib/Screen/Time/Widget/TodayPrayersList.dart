@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:prayer/Utils/Sizes.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 enum PrayerState { passed, active, upcoming }
 class TodayPrayersList extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String name;
   final String subtitle;
   final String time;
@@ -20,11 +21,14 @@ class TodayPrayersList extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPassed = state == PrayerState.passed;
     final isActive = state == PrayerState.active;
-
-    return  Container(
+    const duration = Duration(milliseconds: 400);
+    const curve = Curves.easeInOutCubic;
+    return  AnimatedContainer(
+      duration: duration,
+      curve: curve,
       padding: EdgeInsets.symmetric(
-        horizontal:Sizes(context).GetWidth()*3,
-        vertical:Sizes(context).GetHeight()*2,
+        horizontal: Sizes(context).GetWidth() * 3,
+        vertical: Sizes(context).GetHeight() * 2,
       ),
       decoration: BoxDecoration(
         color: isActive
@@ -52,28 +56,34 @@ class TodayPrayersList extends StatelessWidget {
       child: Row(
         children: [
 
-          // Icon
           Container(
             width: Sizes(context).GetWidth()*10,
             height: Sizes(context).GetWidth()*10,
             decoration: BoxDecoration(
               color: isActive
-                  ? Color(0xFF8b7e66).withOpacity(0.1)
+                  ? Color(0xFFe8e1d1)
                   : isPassed
-                  ? Color(0xFFf0ede4)
-                  : Color(0xFFe8e1d1),
+                  ? Color(0xFF8b7e66).withOpacity(0.1)
+                  : Color(0xFF8b7e66).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: isActive ? 24 : 20,
-              color: isActive
-                  ? Color(0xFF8b7e66)
-                  : isPassed
-                  ? Color(0xFF7a7468)
-                  : Color(0xFF5c5446),
+            child: Center(
+              child: SvgPicture.asset(
+                icon,
+                width: Sizes(context).GetWidth()*6,
+                height: Sizes(context).GetWidth()*6,
+                fit: BoxFit.contain,
+                colorFilter: ColorFilter.mode(
+                  isActive
+                      ? const Color(0xFF8b7e66)
+                      : isPassed
+                      ? const Color(0xFF5c5446)
+                      : const Color(0xFF7a7468),
+                  BlendMode.srcIn,
+                ),
+                         ),
             ),
-          ),
+         ),
           SizedBox(width: Sizes(context).GetWidth()*2),
           Expanded(
             child: Column(
@@ -89,6 +99,7 @@ class TodayPrayersList extends StatelessWidget {
                     decorationColor: Color(0xFFe3ded3),
                   ),
                 ),
+
                 SizedBox(height: Sizes(context).GetHeight()*0.5),
                 Text(
                   subtitle,
@@ -117,10 +128,13 @@ class TodayPrayersList extends StatelessWidget {
                   color: isActive ? Color(0xFF8b7e66) : Color(0xFF7a7468),
                 ),
               ),
+              /*
               if (isActive) ...[
                 const SizedBox(height: 4),
                 Icon(Icons.notifications_active, size: 16, color: Color(0xFF8b7e66)),
               ],
+
+               */
             ],
           ),
         ],

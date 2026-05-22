@@ -4,24 +4,30 @@ import 'package:prayer/Screen/Location/Location.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'Screen/BottomNavBar/BottomNavBar.dart';
+import 'package:provider/provider.dart';
+import 'Screen/Language/LanguageProvider.dart';
 void main()async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
   SystemChrome.setPreferredOrientations(
       [DeviceOrientation.portraitDown, DeviceOrientation.portraitUp]);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => LanguageProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-   // final selectedIndex = ref.watch(language_riverpod);
+    final langCode = context.watch<LanguageProvider>().currentLanguage;
     final languages = ['en','ar'];
-    final language = languages[1];
+    final language = languages[langCode];
     return MaterialApp(
       title: 'Sakina',
       debugShowCheckedModeBanner: false,
