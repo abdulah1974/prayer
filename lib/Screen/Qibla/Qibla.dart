@@ -72,9 +72,7 @@ class _QiblaState extends State<Qibla> {
                         future: _deviceSupport,
                         builder: (context, deviceSnapshot) {
                           if (deviceSnapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(color: primary),
-                            );
+                            return _buildLoadingState(s);
                           }
 
                           // جهاز بدون مستشعر
@@ -98,9 +96,7 @@ class _QiblaState extends State<Qibla> {
                                 stream: FlutterQiblah.qiblahStream,
                                 builder: (context, snapshot) {
                                   if (!snapshot.hasData) {
-                                    return const Center(
-                                      child: CircularProgressIndicator(color: primary),
-                                    );
+                                    return _buildLoadingState(s);
                                   }
 
                                   if (snapshot.hasError) {
@@ -111,7 +107,6 @@ class _QiblaState extends State<Qibla> {
 
                                   final double heading = snapshot.data!.direction;
                                   final double qiblaAngle = snapshot.data!.qiblah;
-
                                   return Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -136,28 +131,23 @@ class _QiblaState extends State<Qibla> {
       ),
     );
   }
-
-  Widget _buildHeader(BuildContext context, Sizes s) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: s.GetWidth() * 6,
-        vertical: s.GetHeight() * 2,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            TextLanguage().GetWord('القبلة'),
-            style: TextStyle(
-              fontSize: s.GetWidth() * 5,
-              fontWeight: FontWeight.bold,
-              color: foreground,
-            ),
-          ),
-        ],
-      ),
+  Widget _buildLoadingState(Sizes s) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Opacity(
+          opacity: 0.4,
+          child: _buildCompass(s, 0, 0),
+        ),
+        SizedBox(height: s.GetHeight() * 5),
+        Opacity(
+          opacity: 0.4,
+          child: _buildInfoSection(s, 0, 0),
+        ),
+      ],
     );
   }
+
 
   Widget _buildCompass(Sizes s, double heading, double qiblaAngle) {
     final double compassSize = s.GetWidth() * 75;

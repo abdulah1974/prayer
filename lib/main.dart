@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'Screen/BottomNavBar/BottomNavBar.dart';
 import 'package:provider/provider.dart';
 import 'Screen/Language/LanguageProvider.dart';
+import 'Screen/Time/TimeProvider.dart';
 void main()async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
@@ -14,8 +15,22 @@ void main()async {
       [DeviceOrientation.portraitDown, DeviceOrientation.portraitUp]);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => LanguageProvider(),
+    // استخدمنا MultiProvider لأن لديك أكثر من Provider الآن
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        // تهيئة TimeProvider فور تشغيل التطبيق
+        ChangeNotifierProvider(
+          create: (context) {
+            final provider = TimeProvider();
+            // استدعاء الدالة بعد بناء الـ Frame الأول مباشرة حتى لا نعطل الـ UI
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              provider.initTimeData(context);
+            });
+            return provider;
+          },
+        ),
+      ],
       child: const MyApp(),
     ),
   );

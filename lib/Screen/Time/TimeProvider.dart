@@ -34,6 +34,7 @@ class TimeProvider extends ChangeNotifier {
   final MuslimRepository repo = MuslimRepository();
   PrayerTime? prayerTime;
   Location? _cachedLocation;
+  DateTime? _tomorrowFajr; // تم تعريف المتغير هنا لحل الخطأ الأول
   final TextLanguage _lang = TextLanguage();
 
   Future<void> initTimeData(BuildContext context) async {
@@ -63,11 +64,20 @@ class TimeProvider extends ChangeNotifier {
         offset: [0, 0, 0, 0, 0, 0],
       );
 
+      // جلب مواقيت اليوم
       final result = await repo.getPrayerTimes(
         location: _cachedLocation!,
         date: DateTime.now(),
         attribute: attribute,
       );
+
+      // جلب مواقيت الغد لحساب الفجر بشكل دقيق
+      final tomorrowResult = await repo.getPrayerTimes(
+        location: _cachedLocation!,
+        date: DateTime.now().add(const Duration(days: 1)),
+        attribute: attribute,
+      );
+      _tomorrowFajr = tomorrowResult?.fajr;
 
       prayerTime = result;
       _startCountdown();
@@ -88,6 +98,7 @@ class TimeProvider extends ChangeNotifier {
       String nextKey = "fajr";
 
       final fajr = prayerTime!.fajr;
+      final sunrise = prayerTime!.sunrise;
       final dhuhr = prayerTime!.dhuhr;
       final asr = prayerTime!.asr;
       final maghrib = prayerTime!.maghrib;
@@ -96,6 +107,9 @@ class TimeProvider extends ChangeNotifier {
       if (now.isBefore(fajr)) {
         nextKey = "fajr";
         nextPrayerDateTime = fajr;
+      } else if (now.isBefore(sunrise)) {
+        nextKey = "sunrise";
+        nextPrayerDateTime = sunrise;
       } else if (now.isBefore(dhuhr)) {
         nextKey = "dhuhr";
         nextPrayerDateTime = dhuhr;
@@ -110,13 +124,15 @@ class TimeProvider extends ChangeNotifier {
         nextPrayerDateTime = isha;
       } else {
         nextKey = "fajr";
-        nextPrayerDateTime = fajr.add(const Duration(days: 1));
+        nextPrayerDateTime = _tomorrowFajr ?? fajr.add(const Duration(days: 1));
       }
 
       _nextPrayerKey = nextKey;
       _nextPrayerName = _getPrayerLocalizedName(nextKey);
-      _nextPrayerTime = _formatToAmPm(nextPrayerDateTime);
-      final difference = nextPrayerDateTime.difference(now);
+
+      // إضافة ! لحل خطأ الـ Null Safety (الخطأ الثاني والثالث)
+      _nextPrayerTime = _formatToAmPm(nextPrayerDateTime!);
+      final difference = nextPrayerDateTime!.difference(now);
       _timeRemaining = "-${_formatDuration(difference)}";
 
       notifyListeners();
