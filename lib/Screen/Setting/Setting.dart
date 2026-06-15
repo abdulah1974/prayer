@@ -34,23 +34,18 @@ class Setting extends StatelessWidget {
             child: Container(
               padding:  EdgeInsets.symmetric(horizontal: Sizes(context).GetWidth()*4),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // الهيدر (Header Section)
-                  Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children:  [
-                          Text(
-                            TextLanguage().GetWord('الإعدادات'),
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                              color: foregroundColor,
-                            ),
-                          ),
-                        ],
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children:  [
+                      Text(
+                        TextLanguage().GetWord('الإعدادات'),
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: foregroundColor,
+                        ),
                       ),
                     ],
                   ),

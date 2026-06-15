@@ -31,6 +31,7 @@ class NextPrayerHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Sizes size = Sizes(context);
+    final bool isSunrise = prayerName == TextLanguage().GetWord('الشروق');
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -51,6 +52,7 @@ class NextPrayerHeroCard extends StatelessWidget {
       padding:  EdgeInsets.all(size.GetHeight()*4),
       child: Column(
         children: [
+          if (!isSunrise) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children:  [
@@ -65,8 +67,9 @@ class NextPrayerHeroCard extends StatelessWidget {
                   letterSpacing: 1.2,
                 ),
               ),
-            ],
-          ),
+             ],
+            ),
+          ],
           SizedBox(height: size.GetHeight()*1),
           Text(
             prayerName, // استخدام المتغير هنا

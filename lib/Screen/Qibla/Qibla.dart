@@ -50,20 +50,15 @@ class _QiblaState extends State<Qibla> {
                 padding: EdgeInsets.symmetric(horizontal: Sizes(context).GetWidth()*4),
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children:  [
-                            Text(
-                              TextLanguage().GetWord('القبلة'),
-                              style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                //color: foregroundColor,
-                              ),
-                            ),
-                          ],
+                    Column(
+                      children:  [
+                        Text(
+                          TextLanguage().GetWord('القبلة'),
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            //color: foregroundColor,
+                          ),
                         ),
                       ],
                     ),
@@ -95,10 +90,28 @@ class _QiblaState extends State<Qibla> {
                               return StreamBuilder<QiblahDirection>(
                                 stream: FlutterQiblah.qiblahStream,
                                 builder: (context, snapshot) {
+                                  final bool locationOff = locationSnapshot.data?.enabled == false;
                                   if (!snapshot.hasData) {
-                                    return _buildLoadingState(s);
+                                    return Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        _buildLoadingState(s),
+                                        if (locationOff)
+                                          Padding(
+                                            padding: EdgeInsets.only(top: s.GetHeight() * 2),
+                                            child: Text(
+                                              TextLanguage().GetWord('يجب تفعيل خدمة الموقع لعمل البوصلة بشكل صحيح'),
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: s.GetWidth() * 3.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.redAccent,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    );
                                   }
-
                                   if (snapshot.hasError) {
                                     return const Center(
                                       child: Text('حدث خطأ في قراءة مستشعرات الجهاز'),

@@ -119,7 +119,6 @@ class _MyHomePageState extends State<Location> {
                   onPressed: ()async {
                     final box = GetStorage();
                     Position? position = await LocationService.determinePosition(context);
-
                     if (position != null) {
                      await box.write('latitude', position.latitude);
                      await box.write('longitude', position.longitude);

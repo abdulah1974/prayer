@@ -9,7 +9,6 @@ import '../../Utils/HijriHelper.dart';
 import '../../Utils/LocationService.dart';
 import '../../Utils/TextLanguage.dart';
 import 'Widget/TodayPrayersList.dart';
-
 class TimeProvider extends ChangeNotifier {
   String _currentAddress = "جاري تحديد الموقع...";
   Position? _currentPosition;
@@ -34,7 +33,7 @@ class TimeProvider extends ChangeNotifier {
   final MuslimRepository repo = MuslimRepository();
   PrayerTime? prayerTime;
   Location? _cachedLocation;
-  DateTime? _tomorrowFajr; // تم تعريف المتغير هنا لحل الخطأ الأول
+  DateTime? _tomorrowFajr;
   final TextLanguage _lang = TextLanguage();
 
   Future<void> initTimeData(BuildContext context) async {
@@ -64,24 +63,26 @@ class TimeProvider extends ChangeNotifier {
         offset: [0, 0, 0, 0, 0, 0],
       );
 
-      // جلب مواقيت اليوم
-      final result = await repo.getPrayerTimes(
-        location: _cachedLocation!,
-        date: DateTime.now(),
-        attribute: attribute,
-      );
+      // جلب اليوم والغد بالتوازي (نص الوقت تقريباً)
+      final results = await Future.wait([
+        repo.getPrayerTimes(
+          location: _cachedLocation!,
+          date: DateTime.now(),
+          attribute: attribute,
+        ),
+        repo.getPrayerTimes(
+          location: _cachedLocation!,
+          date: DateTime.now().add(const Duration(days: 1)),
+          attribute: attribute,
+        ),
+      ]);
 
-      // جلب مواقيت الغد لحساب الفجر بشكل دقيق
-      final tomorrowResult = await repo.getPrayerTimes(
-        location: _cachedLocation!,
-        date: DateTime.now().add(const Duration(days: 1)),
-        attribute: attribute,
-      );
-      _tomorrowFajr = tomorrowResult?.fajr;
+      prayerTime = results[0];
+      _tomorrowFajr = results[1]?.fajr;
 
-      prayerTime = result;
+      // حساب فوري قبل بدء التايمر، بدل الانتظار ثانية لأول Tick
+      _updateNextPrayer();
       _startCountdown();
-      notifyListeners();
     } catch (e) {
       print("خطأ في جلب مواقيت الصلاة: $e");
     }
@@ -89,54 +90,59 @@ class TimeProvider extends ChangeNotifier {
 
   void _startCountdown() {
     _countdownTimer?.cancel();
-
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (prayerTime == null) return;
-
-      final now = DateTime.now();
-      DateTime? nextPrayerDateTime;
-      String nextKey = "fajr";
-
-      final fajr = prayerTime!.fajr;
-      final sunrise = prayerTime!.sunrise;
-      final dhuhr = prayerTime!.dhuhr;
-      final asr = prayerTime!.asr;
-      final maghrib = prayerTime!.maghrib;
-      final isha = prayerTime!.isha;
-
-      if (now.isBefore(fajr)) {
-        nextKey = "fajr";
-        nextPrayerDateTime = fajr;
-      } else if (now.isBefore(sunrise)) {
-        nextKey = "sunrise";
-        nextPrayerDateTime = sunrise;
-      } else if (now.isBefore(dhuhr)) {
-        nextKey = "dhuhr";
-        nextPrayerDateTime = dhuhr;
-      } else if (now.isBefore(asr)) {
-        nextKey = "asr";
-        nextPrayerDateTime = asr;
-      } else if (now.isBefore(maghrib)) {
-        nextKey = "maghrib";
-        nextPrayerDateTime = maghrib;
-      } else if (now.isBefore(isha)) {
-        nextKey = "isha";
-        nextPrayerDateTime = isha;
-      } else {
-        nextKey = "fajr";
-        nextPrayerDateTime = _tomorrowFajr ?? fajr.add(const Duration(days: 1));
-      }
-
-      _nextPrayerKey = nextKey;
-      _nextPrayerName = _getPrayerLocalizedName(nextKey);
-
-      // إضافة ! لحل خطأ الـ Null Safety (الخطأ الثاني والثالث)
-      _nextPrayerTime = _formatToAmPm(nextPrayerDateTime!);
-      final difference = nextPrayerDateTime!.difference(now);
-      _timeRemaining = "-${_formatDuration(difference)}";
-
-      notifyListeners();
+      _updateNextPrayer();
     });
+  }
+
+  void _updateNextPrayer() {
+    if (prayerTime == null) return;
+
+    final now = DateTime.now();
+    DateTime nextPrayerDateTime;
+    String nextKey;
+
+    final fajr = prayerTime!.fajr;
+    final sunrise = prayerTime!.sunrise;
+    final dhuhr = prayerTime!.dhuhr;
+    final asr = prayerTime!.asr;
+    final maghrib = prayerTime!.maghrib;
+    final isha = prayerTime!.isha;
+
+    if (now.isBefore(fajr)) {
+      nextKey = "fajr";
+      nextPrayerDateTime = fajr;
+    } else if (now.isBefore(sunrise)) {
+      nextKey = "sunrise";
+      nextPrayerDateTime = sunrise;
+    } else if (now.isBefore(dhuhr)) {
+      nextKey = "dhuhr";
+      nextPrayerDateTime = dhuhr;
+    } else if (now.isBefore(asr)) {
+      nextKey = "asr";
+      nextPrayerDateTime = asr;
+    } else if (now.isBefore(maghrib)) {
+      nextKey = "maghrib";
+      nextPrayerDateTime = maghrib;
+    } else if (now.isBefore(isha)) {
+      nextKey = "isha";
+      nextPrayerDateTime = isha;
+    } else {
+      nextKey = "fajr";
+      nextPrayerDateTime = _tomorrowFajr ?? fajr.add(const Duration(days: 1));
+    }
+
+    // ما نعيد حساب الاسم المترجم إلا إذا تغيرت الصلاة القادمة فعلاً
+    if (_nextPrayerKey != nextKey || _nextPrayerName == "---") {
+      _nextPrayerName = _getPrayerLocalizedName(nextKey);
+    }
+    _nextPrayerKey = nextKey;
+    _nextPrayerTime = _formatToAmPm(nextPrayerDateTime);
+
+    final difference = nextPrayerDateTime.difference(now);
+    _timeRemaining = "-${_formatDuration(difference)}";
+
+    notifyListeners();
   }
 
   String _getPrayerLocalizedName(String key) {
@@ -178,7 +184,11 @@ class TimeProvider extends ChangeNotifier {
     try {
       Position? position = await LocationService.determinePosition(context);
       if (position == null) {
-        _currentAddress = "الموقع معطل";
+        if (_cachedLocation != null) {
+          _currentAddress = "${_cachedLocation!.name}، ${_cachedLocation!.countryName}";
+        } else {
+          _currentAddress = "الموقع معطل";
+        }
         notifyListeners();
         return;
       }

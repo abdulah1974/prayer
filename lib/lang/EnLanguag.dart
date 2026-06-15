@@ -23,5 +23,6 @@ final EnLanguag  = {
   "ج":"S",
   "غ":"W",
   "ق":"E",
-  "اللغات المتاحة":"AVAILABLE LANGUAGES"
+  "اللغات المتاحة":"AVAILABLE LANGUAGES",
+  "يجب تفعيل خدمة الموقع لعمل البوصلة بشكل صحيح":"Location services must be enabled for the compass to function correctly"
 };
