@@ -73,7 +73,7 @@ class _MyHomePageState extends State<Location> {
                     ),
                     SizedBox(height: size.GetHeight() * 2),
                      Text(
-                      textLanguage.GetWord('الوصول إلى الموقع'),
+                      textLanguage.GetWord('الوصول إلى سكينة'),
                       style: TextStyle(
                         color: primaryColor,
                         fontSize: 24,
@@ -92,22 +92,14 @@ class _MyHomePageState extends State<Location> {
                     ),
                     SizedBox(height: size.GetHeight() * 1),
                      Text(
-                      textLanguage.GetWord('تحتاج سكينة إلى إحداثياتك لحساب مواقيت الصلاة الدقيقة لمنطقتك.'),
+                      textLanguage.GetWord('رفيقك اليومي لتتبع أوقات الصلاة بسهولة وراحة بال.'),
                        textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
                         color: Color(0xFF7A7468),
                       ),
                     ),
-                     SizedBox(height: size.GetHeight() * 1),
-                     Text(
-                       textLanguage.GetWord('يرجى تفعيل الموقع للمتابعة إلى أوقات الصلاة.'),
-                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF7A7468),
-                      ),
-                    ),
+
                   ],
                 ),
               ),
@@ -117,6 +109,7 @@ class _MyHomePageState extends State<Location> {
                 padding:  EdgeInsets.symmetric(horizontal: size.GetWidth()*5, vertical: size.GetHeight()*7),
                 child: ElevatedButton(
                   onPressed: ()async {
+                    /*
                     final box = GetStorage();
                     Position? position = await LocationService.determinePosition(context);
                     if (position != null) {
@@ -128,6 +121,16 @@ class _MyHomePageState extends State<Location> {
                             (route) => false,
                       );
                     }
+
+                     */
+                    final box = GetStorage();
+                    await box.write('latitude', 33.3152);
+                    await box.write('longitude', 44.3661);
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const BottomNavBar()),
+                          (route) => false,
+                   );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
@@ -142,9 +145,7 @@ class _MyHomePageState extends State<Location> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(textLanguage.GetWord('تفعيل خدمة الموقع'), style: TextStyle(fontWeight: FontWeight.bold)),
-                      SizedBox(width: 10),
-                      Icon(Icons.location_on),
+                      Text(textLanguage.GetWord('ابدأ الآن'), style: TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),

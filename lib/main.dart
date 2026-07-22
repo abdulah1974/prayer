@@ -20,16 +20,7 @@ void main()async {
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         // تهيئة TimeProvider فور تشغيل التطبيق
-        ChangeNotifierProvider(
-          create: (context) {
-            final provider = TimeProvider();
-            // استدعاء الدالة بعد بناء الـ Frame الأول مباشرة حتى لا نعطل الـ UI
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              provider.initTimeData(context);
-            });
-            return provider;
-          },
-        ),
+        ChangeNotifierProvider(create: (_) => TimeProvider()),
       ],
       child: const MyApp(),
     ),

@@ -167,7 +167,7 @@ class TimeProvider extends ChangeNotifier {
   String _formatToAmPm(DateTime dateTime) {
     int hour = dateTime.hour;
     final minute = dateTime.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
+    final period = hour >= 12 ? _lang.GetWord('م') : _lang.GetWord('ص');
     if (hour > 12) hour -= 12;
     if (hour == 0) hour = 12;
     return "${hour.toString().padLeft(2, '0')}:$minute $period";
@@ -195,6 +195,28 @@ class TimeProvider extends ChangeNotifier {
 
       _currentPosition = position;
 
+      // الصلاحية موجودة والموقع الحقيقي وصل -> نحدث الموقع المستخدم بحساب الأوقات
+      try {
+        final realLocation = await repo.reverseGeocoder(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+
+        if (realLocation != null) {
+          _cachedLocation = realLocation;
+
+          // نحفظ الإحداثيات الجديدة بالكاش
+          final box = GetStorage();
+          box.write('latitude', position.latitude);
+          box.write('longitude', position.longitude);
+
+          // نعيد حساب أوقات الصلاة بالموقع الجديد
+          await loadPrayerTimes();
+        }
+      } catch (e) {
+        print("خطأ بتحديث الموقع لحساب الصلاة: $e");
+      }
+
       try {
         List<Placemark> placemarks = await placemarkFromCoordinates(
           position.latitude,
@@ -205,7 +227,9 @@ class TimeProvider extends ChangeNotifier {
           _currentAddress = "${placemarks[0].locality}، ${placemarks[0].country}";
         }
       } catch (_) {
-        _currentAddress = "تم تحديد الموقع (بدون إنترنت)";
+        if (_cachedLocation != null) {
+          _currentAddress = "${_cachedLocation!.name}، ${_cachedLocation!.countryName}";
+        }
       }
 
       notifyListeners();

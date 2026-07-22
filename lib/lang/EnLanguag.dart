@@ -1,9 +1,9 @@
 final EnLanguag  = {
-  'الوصول إلى الموقع': 'Location Access',
+  'الوصول إلى سكينة': 'Access to Sakina',
   'اسم_التطبيق': 'Sakina',
-  'تحتاج سكينة إلى إحداثياتك لحساب مواقيت الصلاة الدقيقة لمنطقتك.': 'Sakina requires your coordinates to calculate precise prayer times for your specific area.',
+  'رفيقك اليومي لتتبع أوقات الصلاة بسهولة وراحة بال.': 'Your daily companion for tracking prayer times with ease and peace of mind.',
   'يرجى تفعيل الموقع للمتابعة إلى أوقات الصلاة.': 'Please enable location to proceed to prayer times.',
-  'تفعيل خدمة الموقع': 'Enable Location Service',
+  'ابدأ الآن': 'Get Started',
   "الصلاة التالية":"NEXT PRAYER",
   "الوقت المتبقي":"TIME REMAINING",
   "الصلاة اليوم":"Today's Prayers",
@@ -24,5 +24,7 @@ final EnLanguag  = {
   "غ":"W",
   "ق":"E",
   "اللغات المتاحة":"AVAILABLE LANGUAGES",
-  "يجب تفعيل خدمة الموقع لعمل البوصلة بشكل صحيح":"Location services must be enabled for the compass to function correctly"
+  "يجب تفعيل خدمة الموقع لعمل البوصلة بشكل صحيح":"Location services must be enabled for the compass to function correctly",
+  'ص': 'AM',
+  'م': 'PM',
 };
