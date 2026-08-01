@@ -5,6 +5,7 @@ import '../../Utils/Sizes.dart';
 import '../../Utils/TextLanguage.dart';
 import '../../Widget/IslamicPatternPainter.dart';
 import '../../Widget/Mosque.dart';
+import '../../main.dart';
 import '../BottomNavBar/BottomNavBar.dart';
 import 'package:get_storage/get_storage.dart';
 class Location extends StatefulWidget {
@@ -123,6 +124,7 @@ class _MyHomePageState extends State<Location> {
                     }
 
                      */
+                    await requestAlarmPermissions();
                     final box = GetStorage();
                     await box.write('latitude', 33.3152);
                     await box.write('longitude', 44.3661);

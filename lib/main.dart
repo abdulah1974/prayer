@@ -7,10 +7,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'Screen/BottomNavBar/BottomNavBar.dart';
 import 'package:provider/provider.dart';
 import 'Screen/Language/LanguageProvider.dart';
+import 'Screen/PrayerAlerts/PrayerAlertsProvider.dart';
 import 'Screen/Time/TimeProvider.dart';
+import 'Utils/PrayerManager.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:alarm_volume_control/alarm.dart';
 void main()async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
+  await PrayerManager().init();
+  //  إيقاف الأذان إذا كان يعمل عند فتح التطبيق
+ // await PrayerManager().stopRingingIfActive();
   SystemChrome.setPreferredOrientations(
       [DeviceOrientation.portraitDown, DeviceOrientation.portraitUp]);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -21,6 +28,7 @@ void main()async {
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         // تهيئة TimeProvider فور تشغيل التطبيق
         ChangeNotifierProvider(create: (_) => TimeProvider()),
+        ChangeNotifierProvider(create: (_) => PrayerAlertsProvider()),
       ],
       child: const MyApp(),
     ),
@@ -90,4 +98,9 @@ class _MyHomePageState extends State<MyHomePage> {
       body:latitude==null?Location(title: "title"):const BottomNavBar(),
     );
   }
+}
+
+Future<void> requestAlarmPermissions() async {
+  await Permission.notification.request();
+  await Permission.scheduleExactAlarm.request();
 }

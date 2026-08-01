@@ -5,6 +5,7 @@ import '../../Widget/IslamicPatternPainter.dart';
 import '../Language/Language.dart';
 import '../Language/LanguageProvider.dart';
 import 'package:provider/provider.dart';
+import '../PrayerAlerts/PrayerAlerts.dart';
 class Setting extends StatelessWidget {
   const Setting({super.key});
 
@@ -114,6 +115,62 @@ class Setting extends StatelessWidget {
                                 },
                               ),
                                /*
+                              // خيار سياسة الخصوصية (Privacy Policy)
+                              _buildSettingTile(
+                                icon: Icons.security,
+                                title: 'Privacy Policy',
+                                trailing: const Icon(Icons.chevron_right,
+                                    color: mutedForegroundColor, size: 18),
+                                showBorder: false,
+                                onTap: () {
+                                  // أضف هنا وظيفة فتح سياسة الخصوصية
+                                },
+                              ),
+
+                                */
+                            ],
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: borderColor.withOpacity(
+                                0.6)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // خيار اللغة (Language)
+                              _buildSettingTile(
+                                icon: Icons.alarm_outlined,
+                                title:TextLanguage().GetWord('تنبيهات الصلاة'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children:  [
+                                    Icon(Icons.chevron_right,
+                                        color: mutedForegroundColor, size: 18),
+                                  ],
+                                ),
+                                showBorder: true,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    PageRouteBuilder(
+                                      pageBuilder: (context, a1, a2) => PrayerAlerts(),
+                                      transitionDuration: Duration.zero,
+                                      reverseTransitionDuration: Duration.zero,
+                                    ),
+                                  );
+                                },
+                              ),
+                              /*
                               // خيار سياسة الخصوصية (Privacy Policy)
                               _buildSettingTile(
                                 icon: Icons.security,

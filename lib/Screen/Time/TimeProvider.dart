@@ -36,57 +36,46 @@ class TimeProvider extends ChangeNotifier {
   DateTime? _tomorrowFajr;
   final TextLanguage _lang = TextLanguage();
 
+
   Future<void> initTimeData(BuildContext context) async {
     _greeting = GreetingHelper.getGreeting();
     _hijriDate = HijriHelper.getTodayHijri();
-    notifyListeners();
-
-    if (_cachedLocation == null) {
-      final box = GetStorage();
-      double lat = box.read('latitude') ?? 36.1912;
-      double lng = box.read('longitude') ?? 44.0091;
-      _cachedLocation = await repo.reverseGeocoder(latitude: lat, longitude: lng);
-    }
-
-    await loadPrayerTimes();
     _fetchLocationInBackground(context);
+    await getPrayerTimesExample();
   }
+  Future<void> getPrayerTimesExample() async {
+    final muslimRepo = MuslimRepository();
+    final box = GetStorage();
+    // Create a PrayerAttribute object.
+    final attribute = PrayerAttribute(
+      calculationMethod: CalculationMethod.makkah, // if it's custom, you should pass CustomMethod parameter too.
+      asrMethod: AsrMethod.shafii,
+      higherLatitudeMethod: HigherLatitudeMethod.angleBased,
+      offset: [0, 0, 0, 0, 0, 0],
+    );
 
-  Future<void> loadPrayerTimes() async {
-    try {
-      if (_cachedLocation == null) return;
+    // Assume that 'location' has been retrieved using one of the location methods above.
+    double lat = box.read('latitude') ?? 36.1911;
+    double lng = box.read('longitude') ?? 44.0094;
+    final location = await muslimRepo.reverseGeocoder(
+      latitude: lat,
+      longitude:lng,
+    );
+    final prayerTime = await muslimRepo.getPrayerTimes(
+      location:location!,
+      date: DateTime.now(),
+      attribute: attribute,
+      // You can set useFixedPrayer: false if you want calculated prayer times
+      // for places that have fixed prayer times.
+    );
 
-      final attribute = PrayerAttribute(
-        calculationMethod: CalculationMethod.makkah,
-        asrMethod: AsrMethod.shafii,
-        higherLatitudeMethod: HigherLatitudeMethod.angleBased,
-        offset: [0, 0, 0, 0, 0, 0],
-      );
-
-      // جلب اليوم والغد بالتوازي (نص الوقت تقريباً)
-      final results = await Future.wait([
-        repo.getPrayerTimes(
-          location: _cachedLocation!,
-          date: DateTime.now(),
-          attribute: attribute,
-        ),
-        repo.getPrayerTimes(
-          location: _cachedLocation!,
-          date: DateTime.now().add(const Duration(days: 1)),
-          attribute: attribute,
-        ),
-      ]);
-
-      prayerTime = results[0];
-      _tomorrowFajr = results[1]?.fajr;
-
-      // حساب فوري قبل بدء التايمر، بدل الانتظار ثانية لأول Tick
+    if (prayerTime != null) {
+      this.prayerTime = prayerTime;
       _updateNextPrayer();
       _startCountdown();
-    } catch (e) {
-      print("خطأ في جلب مواقيت الصلاة: $e");
     }
   }
+
 
   void _startCountdown() {
     _countdownTimer?.cancel();
@@ -211,7 +200,7 @@ class TimeProvider extends ChangeNotifier {
           box.write('longitude', position.longitude);
 
           // نعيد حساب أوقات الصلاة بالموقع الجديد
-          await loadPrayerTimes();
+          await getPrayerTimesExample();
         }
       } catch (e) {
         print("خطأ بتحديث الموقع لحساب الصلاة: $e");

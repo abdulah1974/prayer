@@ -27,4 +27,5 @@ final EnLanguag  = {
   "يجب تفعيل خدمة الموقع لعمل البوصلة بشكل صحيح":"Location services must be enabled for the compass to function correctly",
   'ص': 'AM',
   'م': 'PM',
+  "تنبيهات الصلاة":"Prayer Alerts"
 };

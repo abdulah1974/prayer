@@ -2,8 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:prayer/Utils/TextLanguage.dart';
+import '../../Utils/QiblaCalculator.dart';
 import '../../Utils/Sizes.dart';
 import '../../Widget/IslamicPatternPainter.dart';
+import 'package:get_storage/get_storage.dart';
 
 class Qibla extends StatefulWidget {
   const Qibla({super.key});
@@ -33,7 +35,11 @@ class _QiblaState extends State<Qibla> {
   @override
   Widget build(BuildContext context) {
     final s = Sizes(context);
-
+    final box= GetStorage();
+    final qibla = QiblaCalculator.calculateQibla(
+      latitude:box.read('latitude')?? 36.1912,
+      longitude: box.read('longitude')?? 44.0091,
+    );
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -67,7 +73,7 @@ class _QiblaState extends State<Qibla> {
                         future: _deviceSupport,
                         builder: (context, deviceSnapshot) {
                           if (deviceSnapshot.connectionState == ConnectionState.waiting) {
-                            return _buildLoadingState(s);
+                            return _buildLoadingState(s,qibla.round());
                           }
 
                           // جهاز بدون مستشعر
@@ -95,7 +101,7 @@ class _QiblaState extends State<Qibla> {
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        _buildLoadingState(s),
+                                        _buildLoadingState(s,qibla.round()),
                                         if (locationOff)
                                           Padding(
                                             padding: EdgeInsets.only(top: s.GetHeight() * 2),
@@ -125,7 +131,7 @@ class _QiblaState extends State<Qibla> {
                                     children: [
                                       _buildCompass(s, heading, qiblaAngle),
                                       SizedBox(height: s.GetHeight() * 5),
-                                      _buildInfoSection(s, heading, qiblaAngle),
+                                      _buildInfoSection(qibla.toInt(),s, heading, qiblaAngle),
                                     ],
                                   );
                                 },
@@ -144,7 +150,7 @@ class _QiblaState extends State<Qibla> {
       ),
     );
   }
-  Widget _buildLoadingState(Sizes s) {
+  Widget _buildLoadingState(Sizes s,int qibla) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -155,7 +161,7 @@ class _QiblaState extends State<Qibla> {
         SizedBox(height: s.GetHeight() * 5),
         Opacity(
           opacity: 0.4,
-          child: _buildInfoSection(s, 0, 0),
+          child: _buildInfoSection(qibla,s, 0, 0),
         ),
       ],
     );
@@ -308,7 +314,7 @@ class _QiblaState extends State<Qibla> {
     }).toList();
   }
 
-  Widget _buildInfoSection(Sizes s, double heading, double qiblaAngle) {
+  Widget _buildInfoSection(int qibla,Sizes s, double heading, double qiblaAngle) {
     return Column(
       children: [
         Row(
@@ -317,7 +323,7 @@ class _QiblaState extends State<Qibla> {
           textBaseline: TextBaseline.alphabetic,
           children: [
             Text(
-              '${195}°',
+              '${qibla}°',
               style: TextStyle(
                 fontSize: s.GetWidth() * 10,
                 fontWeight: FontWeight.bold,
