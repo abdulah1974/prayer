@@ -11,7 +11,6 @@ import 'Screen/PrayerAlerts/PrayerAlertsProvider.dart';
 import 'Screen/Time/TimeProvider.dart';
 import 'Utils/PrayerManager.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:alarm_volume_control/alarm.dart';
 void main()async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();

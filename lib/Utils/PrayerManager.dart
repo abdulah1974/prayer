@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:alarm_volume_control/alarm.dart';
+import 'package:alarm/alarm.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:muslim_data_flutter/muslim_data_flutter.dart';
 class PrayerManager {
@@ -32,14 +32,17 @@ class PrayerManager {
     }
   }
 
-  Future<void> init() async {
-    await Alarm.init();
-    _initRingListener();
-    await rescheduleAllEnabledPrayers();
-  //  final alarms = await Alarm.getAlarms();
-  //  print("Scheduled alarms: $alarms");
-  }
 
+  Future<void> init() async {
+    try {
+      await Alarm.init();
+      _initRingListener();
+      await rescheduleAllEnabledPrayers();
+    } catch (e, s) {
+      print(e);
+      print(s);
+    }
+  }
   /// إعادة جدولة جميع الصلوات المفعلة بناءً على الوقت الحالي الحقيقي
   Future<void> rescheduleAllEnabledPrayers() async {
     for (int id = 1; id <= 5; id++) {

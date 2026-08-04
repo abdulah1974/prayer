@@ -8,6 +8,7 @@ import '../../Widget/Mosque.dart';
 import '../../main.dart';
 import '../BottomNavBar/BottomNavBar.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
 class Location extends StatefulWidget {
   const Location({super.key, required this.title});
   final String title;
@@ -110,21 +111,8 @@ class _MyHomePageState extends State<Location> {
                 padding:  EdgeInsets.symmetric(horizontal: size.GetWidth()*5, vertical: size.GetHeight()*7),
                 child: ElevatedButton(
                   onPressed: ()async {
-                    /*
-                    final box = GetStorage();
-                    Position? position = await LocationService.determinePosition(context);
-                    if (position != null) {
-                     await box.write('latitude', position.latitude);
-                     await box.write('longitude', position.longitude);
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => const BottomNavBar()),
-                            (route) => false,
-                      );
-                    }
-
-                     */
-                    await requestAlarmPermissions();
+                    await Permission.notification.request();
+                    await Permission.scheduleExactAlarm.request();
                     final box = GetStorage();
                     await box.write('latitude', 33.3152);
                     await box.write('longitude', 44.3661);

@@ -43,6 +43,7 @@ class TimeProvider extends ChangeNotifier {
     _fetchLocationInBackground(context);
     await getPrayerTimesExample();
   }
+
   Future<void> getPrayerTimesExample() async {
     final muslimRepo = MuslimRepository();
     final box = GetStorage();
@@ -56,7 +57,7 @@ class TimeProvider extends ChangeNotifier {
 
     // Assume that 'location' has been retrieved using one of the location methods above.
     double lat = box.read('latitude') ?? 36.1911;
-    double lng = box.read('longitude') ?? 44.0094;
+    double lng = box.read('longitude') ?? 44.0092;
     final location = await muslimRepo.reverseGeocoder(
       latitude: lat,
       longitude:lng,
@@ -171,59 +172,90 @@ class TimeProvider extends ChangeNotifier {
 
   Future<void> _fetchLocationInBackground(BuildContext context) async {
     try {
-      Position? position = await LocationService.determinePosition(context);
-      if (position == null) {
-        if (_cachedLocation != null) {
-          _currentAddress = "${_cachedLocation!.name}، ${_cachedLocation!.countryName}";
-        } else {
-          _currentAddress = "الموقع معطل";
-        }
+      // 1. التحقق من تشغيل GPS
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _currentAddress = "خدمة الموقع معطلة بالهاتف";
         notifyListeners();
         return;
       }
 
-      _currentPosition = position;
-
-      // الصلاحية موجودة والموقع الحقيقي وصل -> نحدث الموقع المستخدم بحساب الأوقات
-      try {
-        final realLocation = await repo.reverseGeocoder(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
-
-        if (realLocation != null) {
-          _cachedLocation = realLocation;
-
-          // نحفظ الإحداثيات الجديدة بالكاش
-          final box = GetStorage();
-          box.write('latitude', position.latitude);
-          box.write('longitude', position.longitude);
-
-          // نعيد حساب أوقات الصلاة بالموقع الجديد
-          await getPrayerTimesExample();
+      // 2. التحقق من صلاحية الموقع
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _currentAddress = "تم رفض صلاحية الموقع";
+          notifyListeners();
+          return;
         }
-      } catch (e) {
-        print("خطأ بتحديث الموقع لحساب الصلاة: $e");
       }
 
+      if (permission == LocationPermission.deniedForever) {
+        _currentAddress = "صلاحية الموقع مرفوضة";
+        notifyListeners();
+        return;
+      }
+
+      // 3. جلب الموقع الحالي بحد زمن أقصى (Timeout) لكي لا يتجمد التطبيق أوفلاين
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5), // مهلة زمنية للأوفلاين
+        ),
+      );
+
+      _currentPosition = position;
+
+      // 4. تحويل الإحداثيات محلياً (Offline Reverse Geocoding)
+      final realLocation = await repo.reverseGeocoder(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+
+      if (realLocation != null) {
+        _cachedLocation = realLocation;
+
+        // حفظ الإحداثيات
+        final box = GetStorage();
+        box.write('latitude', position.latitude);
+        box.write('longitude', position.longitude);
+
+        // تعيين اسم المدينة المحاسبة محلياً أوفلاين
+        _currentAddress = "${realLocation.name}، ${realLocation.countryName}";
+
+        // إعادة حساب أوقات الصلاة
+        await getPrayerTimesExample();
+      }
+
+      // 5. محاولة جلب الاسم الدقيق أونلاين فقط إذا وجد إنترنت
       try {
         List<Placemark> placemarks = await placemarkFromCoordinates(
           position.latitude,
           position.longitude,
         ).timeout(const Duration(seconds: 2));
 
-        if (placemarks.isNotEmpty) {
+        if (placemarks.isNotEmpty && placemarks[0].locality != null) {
           _currentAddress = "${placemarks[0].locality}، ${placemarks[0].country}";
         }
       } catch (_) {
-        if (_cachedLocation != null) {
-          _currentAddress = "${_cachedLocation!.name}، ${_cachedLocation!.countryName}";
-        }
+        // في حال الأوفلاين سيفشل هذا الجزء ويتجاهله التطبيق ويعتمد الاسم المحلي أوفلاين
       }
 
       notifyListeners();
     } catch (e) {
       print("خطأ في تحديد الموقع: $e");
+
+      // إذا فشل GPS، نستخدم الموقع المخزن سابقاً في GetStorage
+      final box = GetStorage();
+      double? lat = box.read('latitude');
+      double? lng = box.read('longitude');
+      if (lat != null && lng != null) {
+        _currentAddress = "الموقع المخزن محلياً";
+      } else {
+        _currentAddress = "فشل جلب الموقع";
+      }
+      notifyListeners();
     }
   }
 

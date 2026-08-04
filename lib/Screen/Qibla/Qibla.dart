@@ -1,12 +1,12 @@
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_qiblah/flutter_qiblah.dart';
+import 'package:flutter_rotation_sensor/flutter_rotation_sensor.dart';
 import 'package:prayer/Utils/TextLanguage.dart';
 import '../../Utils/QiblaCalculator.dart';
 import '../../Utils/Sizes.dart';
 import '../../Widget/IslamicPatternPainter.dart';
 import 'package:get_storage/get_storage.dart';
-
 class Qibla extends StatefulWidget {
   const Qibla({super.key});
 
@@ -22,15 +22,17 @@ class _QiblaState extends State<Qibla> {
   static const Color cardBg     = Color(0xFFFFFFFF);
   static const Color border     = Color(0xFFe3ded3);
 
-  late Future<bool?> _deviceSupport;
-
   @override
   void initState() {
     super.initState();
-    _deviceSupport = FlutterQiblah.androidDeviceSensorSupport();
+    RotationSensor.samplingPeriod = SensorInterval.uiInterval;
+    RotationSensor.referenceFrame = ReferenceFrame.trueNorth;
   }
 
-
+  double _toDegrees(double radians) {
+    double deg = radians * 180 / math.pi;
+    return (deg + 360) % 360;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,84 +61,37 @@ class _QiblaState extends State<Qibla> {
                     Column(
                       children:  [
                         Text(
-                          TextLanguage().GetWord('القبلة'),
+                          'القبلة',
                           style: TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            //color: foregroundColor,
                           ),
                         ),
                       ],
                     ),
                     Expanded(
-                      child: FutureBuilder<bool?>(
-                        future: _deviceSupport,
-                        builder: (context, deviceSnapshot) {
-                          if (deviceSnapshot.connectionState == ConnectionState.waiting) {
-                            return _buildLoadingState(s,qibla.round());
+                      child: StreamBuilder<OrientationEvent>(
+                        stream: RotationSensor.orientationStream,
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return _buildLoadingState(s, qibla.round());
                           }
-
-                          // جهاز بدون مستشعر
-                          if (deviceSnapshot.data == false) {
+                          if (snapshot.hasError) {
                             return const Center(
-                              child: Text('جهازك لا يدعم مستشعر الاتجاه'),
+                              child: Text('حدث خطأ في قراءة مستشعرات الجهاز'),
                             );
                           }
 
-                          // تحقق من الـ location قبل فتح الـ stream
-                          return FutureBuilder<LocationStatus>(
-                            future: FlutterQiblah.checkLocationStatus(),
-                            builder: (context, locationSnapshot) {
-                              if (locationSnapshot.connectionState == ConnectionState.waiting) {
-                                return const Center(
-                                  child: CircularProgressIndicator(color: primary),
-                                );
-                              }
-                              // كل شي تمام ← افتح الـ stream
-                              return StreamBuilder<QiblahDirection>(
-                                stream: FlutterQiblah.qiblahStream,
-                                builder: (context, snapshot) {
-                                  final bool locationOff = locationSnapshot.data?.enabled == false;
-                                  if (!snapshot.hasData) {
-                                    return Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        _buildLoadingState(s,qibla.round()),
-                                        if (locationOff)
-                                          Padding(
-                                            padding: EdgeInsets.only(top: s.GetHeight() * 2),
-                                            child: Text(
-                                              TextLanguage().GetWord('يجب تفعيل خدمة الموقع لعمل البوصلة بشكل صحيح'),
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: s.GetWidth() * 3.5,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.redAccent,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    );
-                                  }
-                                  if (snapshot.hasError) {
-                                    return const Center(
-                                      child: Text('حدث خطأ في قراءة مستشعرات الجهاز'),
-                                    );
-                                  }
-
-                                  final double heading = snapshot.data!.direction;
-                                  final double qiblaAngle = snapshot.data!.qiblah;
-                                  return Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _buildCompass(s, heading, qiblaAngle),
-                                      SizedBox(height: s.GetHeight() * 5),
-                                      _buildInfoSection(qibla.toInt(),s, heading, qiblaAngle),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
+                          final double heading = _toDegrees(snapshot.data!.eulerAngles.azimuth);
+                         // final double qiblaAngle = (heading + qibla.round()) % 360;
+                          // qiblaAngle هنا هو زاوية القبلة كنسبة مطلقة (شمال + زاوية القبلة)
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildCompass(s, heading, qibla.round()),
+                              SizedBox(height: s.GetHeight() * 5),
+                              _buildInfoSection(qibla.round(), s, heading, qibla.round()),
+                            ],
                           );
                         },
                       ),
@@ -168,13 +123,13 @@ class _QiblaState extends State<Qibla> {
   }
 
 
-  Widget _buildCompass(Sizes s, double heading, double qiblaAngle) {
+  Widget _buildCompass(Sizes s, double heading, int qiblaAngle) {
     final double compassSize = s.GetWidth() * 75;
     final double innerSize   = compassSize * 0.70;
     final double kaabaSize   = s.GetWidth() * 10;
 
     final double compassTurns = -heading / 360;
-    final double kaabaTurns   = -qiblaAngle / 360;
+    final double kaabaTurns   = -(heading - qiblaAngle) / 360;
 
     return SizedBox(
       width: compassSize,
@@ -289,10 +244,10 @@ class _QiblaState extends State<Qibla> {
 
   List<Widget> _buildCardinalPoints(Sizes s, double compassSize) {
     final labels = [
-      (TextLanguage().GetWord('ش'), Alignment.topCenter),
-      (TextLanguage().GetWord('ج'), Alignment.bottomCenter),
-      (TextLanguage().GetWord('غ'), Alignment.centerLeft),
-      (TextLanguage().GetWord('ق'), Alignment.centerRight),
+      ("ش", Alignment.topCenter),
+      ('ج', Alignment.bottomCenter),
+      ('غ', Alignment.centerLeft),
+      ('ق', Alignment.centerRight),
     ];
 
     return labels.map((item) {
@@ -314,7 +269,7 @@ class _QiblaState extends State<Qibla> {
     }).toList();
   }
 
-  Widget _buildInfoSection(int qibla,Sizes s, double heading, double qiblaAngle) {
+  Widget _buildInfoSection(int qibla,Sizes s, double heading, int qiblaAngle) {
     return Column(
       children: [
         Row(
@@ -352,7 +307,7 @@ class _QiblaState extends State<Qibla> {
             ),
             SizedBox(width: s.GetWidth() * 1.5),
             Text(
-              TextLanguage().GetWord("اتجاهك"),
+              "اتجاهك",
               style: TextStyle(
                 fontSize: s.GetWidth() * 4.5,
                 fontWeight: FontWeight.w500,
@@ -378,7 +333,7 @@ class _QiblaState extends State<Qibla> {
               Icon(Icons.location_on_rounded, size: s.GetWidth() * 4, color: primary),
               SizedBox(width: s.GetWidth() * 1.5),
               Text(
-                TextLanguage().GetWord('مكة المكرمة'),
+                'مكة المكرمة',
                 style: TextStyle(
                   fontSize: s.GetWidth() * 3.5,
                   fontWeight: FontWeight.w600,
@@ -445,7 +400,7 @@ class _DashedCirclePainter extends CustomPainter {
       ..strokeWidth = 1;
 
     const dashCount = 60;
-    const dashAngle = (2 * pi) / dashCount;
+    const dashAngle = (2 * math.pi) / dashCount;
 
     for (int i = 0; i < dashCount; i++) {
       if (i % 2 == 0) {
@@ -467,3 +422,5 @@ class _DashedCirclePainter extends CustomPainter {
   @override
   bool shouldRepaint(_) => false;
 }
+
+
